@@ -54,7 +54,7 @@
           var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
           chart.draw(data, options);
       }
-      
+
       function main() {
         // create map
         var map = L.map('map', {
@@ -66,7 +66,7 @@
         L.tileLayer('http://{s}.api.cartocdn.com/base-light/{z}/{x}/{y}.png', {
           attribution: 'CartoDB'
         }).addTo(map);
-        cartodb.createLayer(map, 'https://dianalam.cartodb.com/api/v2/viz/82d461f0-f484-11e5-8781-0e31c9be1b51/viz.json')
+        cartodb.createLayer(map, 'http://documentation.cartodb.com/api/v2/viz/7eb2096a-51d9-11e3-89a7-5404a6a683d5/viz.json')
          .addTo(map)
          .on('done', function(layer) {
 			 var sublayer = layer.getSubLayer(0);
