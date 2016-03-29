@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Custom infowindow example | CartoDB.js</title>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+    <link rel="shortcut icon" href="http://cartodb.com/assets/favicon.ico" />
+    <style>
+      html, body {
+        height: 100%;
+        padding: 0;
+        margin: 0;
+      }
+      #map {
+        height: 67%;
+        padding: 0;
+        margin: 0;
+      }
+      #dashboard {
+        height: 33%;
+        padding: 25px;
+        margin: 0;
+        border-top: 2px solid #333;
+      }
+    </style>
+
+    <link rel="stylesheet" href="http://libs.cartodb.com/cartodb.js/v3/3.11/themes/css/cartodb.css" />
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="dashboard">
+	<div id="chart_div"></div>
+    </div>
+    <script type="infowindow/html" id="infowindow_template">
+    </script>
+
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script src="http://libs.cartodb.com/cartodb.js/v3/3.11/cartodb.js"></script>
+
+    <script>
+      // load visualization library from google
+      google.load('visualization', '1.0', {'packages':['corechart']});
+      function draw_chart(data, name) {
+         var data = google.visualization.arrayToDataTable([
+            ['', 'population'],
+            ['max',  data[0]],
+            ['min',  data[1]]
+         ]);
+          var options = {
+            title: name + ' population',
+            legend: { position: "none" },
+            width: 300,
+          };
+          var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
+          chart.draw(data, options);
+      }
+      
+      function main() {
+        // create map
+        var map = L.map('map', {
+          zoomControl: false,
+          center: [0, 0],
+          zoom: 3
+        });
+        // add a nice baselayer from Cartodb
+        L.tileLayer('http://{s}.api.cartocdn.com/base-light/{z}/{x}/{y}.png', {
+          attribution: 'CartoDB'
+        }).addTo(map);
+        cartodb.createLayer(map, 'https://dianalam.cartodb.com/api/v2/viz/82d461f0-f484-11e5-8781-0e31c9be1b51/viz.json')
+         .addTo(map)
+         .on('done', function(layer) {
+			 var sublayer = layer.getSubLayer(0);
+			 sublayer.setInteraction(true);
+			 sublayer.setInteractivity("cartodb_id, name,pop_max,pop_min");
+
+			sublayer.on('featureClick',function(e, latlng, pos, data, subLayerIndex) {
+				draw_chart([data.pop_min, data.pop_max], data.name);
+			});
+          }).on('error', function() {
+            console.log("some error occurred");
+          });
+      }
+      window.onload = main;
+    </script>
+  </body>
+</html>
