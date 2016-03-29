@@ -14,20 +14,24 @@
         padding: 0;
         margin: 0;
       }
+
       #map {
         flex-grow: 1;
       }
+
       #sidebar {
         position: relative;
         width: 0;
         transition: width 0.5s ease-in-out;
+        fill: #00000;
       }
 
       #sidebar-chart {
         margin-top: 20px;
       }
+
       #sidebar.open {
-        width: 250px;
+        width: 500px;
       }
 
       #sidebar.open #sidebar-close {
@@ -66,14 +70,17 @@
             tiles_loader: true,
             center_lat: 40.730610,
             center_lon: -73.875,
-            zoom: 11
+            zoom: 12
         })
         .done(function(vis, layers) {
           // layer 0 is the base layer, layer 1 is cartodb layer
           // setInteraction is disabled by default
           layers[1].setInteraction(true);
           layers[1].on('featureClick', function(e, latlng, pos, data) {
-            drawChart(data);
+            drawLandUsePieChart(data);
+            drawPhysicalFeatureBarChart(data);
+            drawEconomicFeatureBarChart(data);
+            console.log(data);
           });
           // you can get the native map to work with it
           var map = vis.getNativeMap();
@@ -92,20 +99,72 @@
         document.getElementById('sidebar').classList.remove('open');
       });
 
-      function drawChart (data) {
+      function drawLandUsePieChart (data) {
         document.getElementById('sidebar').classList.add('open');
         var chartData = google.visualization.arrayToDataTable([
-           ['', 'bingbong'],
-           ['max',  data.total_pop]
+           ['land use type', '% of total sf'],
+           ['retail',  data.pct_retail],
+           ['residential', data.pct_residential],
+           ['industrial', data.pct_ind],
+           ['office', data.pct_office],
+           ['other', data.pct_other]
         ]);
          var options = {
-           title: data.ntaname + ' population',
+           title: data.ntaname + ' Land Use Breakdown',
+          //  legend: { position: "none" },
+           width: 400,
+           chartArea: {width: '80%', height: '80%'},
+           pieHole: 0.4
+         };
+         var chart = new google.visualization.PieChart(document.getElementById('sidebar-chart'));
+         chart.draw(chartData, options);
+      }
+
+      function drawPhysicalFeatureBarChart (data) {
+        document.getElementById('sidebar').classList.add('open');
+        var chartData = google.visualization.arrayToDataTable([
+           ['physical feature', '% above or below median', 'median'],
+           ['assessed value',  data.mp_median_assesstot, 1],
+           ['year built', data.mp_yearbuilt, 1],
+           ['building heights', data.mp_median_numfloors, 1],
+           ['housing costs as % of income', data.mp_hh_type1_ht, 1]
+        ]);
+         var options = {
+           title: data.ntaname + ' Physical Features',
            legend: { position: "none" },
-           width: 250
+           width: 400,
+           chartArea: {width: '75%', height: '50%'},
+           seriesType: 'bars',
+           series: {1: {type: 'line'}}
+         };
+         var chart = new google.visualization.ComboChart(document.getElementById('sidebar-chart'));
+         chart.draw(chartData, options);
+      }
+
+      function drawEconomicFeatureBarChart (data) {
+        document.getElementById('sidebar').classList.add('open');
+        var chartData = google.visualization.arrayToDataTable([
+           ['socioeconomic feature', '% of median', {role: 'style'}, 'median'],
+           ['% non-family households',  data.mp_hh_type_pct_nonfamily, 'black',  1],
+           ['% persons of color', data.mp_race_pct_nonwhite, 'black', 1],
+           ['household income', data.mp_median_hh_income,'black', 1],
+           ['resident density', data.mp_resident_density, 'black', 1],
+           ['worker density', data.mp_worker_density,'black',  1]
+        ]);
+         var options = {
+           title: data.ntaname + ' Socioeconomic Features',
+           legend: { position: "none" },
+           width: 450,
+           height: 300,
+           chartArea: {width: '80%', height: '75%'},
+           seriesType: 'bars',
+           series: {1: {type: 'line'}},
+          //  hAxis: {slantedTextAngle: 55}
          };
          var chart = new google.visualization.ColumnChart(document.getElementById('sidebar-chart'));
          chart.draw(chartData, options);
       }
+
     </script>
   </body>
 </html>
