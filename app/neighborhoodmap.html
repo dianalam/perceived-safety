@@ -174,6 +174,63 @@
           console.log(err);
         });
       }
+
+      var polygons = {};
+
+      function geometryHover(username, map, layer, options) {
+
+          options = options || {}
+          var HIGHLIGHT_STYLE = {
+            weight: 3,
+            color: '#FFFFFF',
+            opacity: 1,
+            fillColor: '#FFFFFF',
+            fillOpacity: 0.3
+          };
+          style = options.style || HIGHLIGHT_STYLE;
+          var polygonsHighlighted = [];
+
+          // fetch the geometry
+          var sql = new cartodb.SQL({ user: dianalam, format: 'geojson' });
+          sql.execute("select cartodb_id, ST_Simplify(the_geom, 0.1) as the_geom from (" + layer.getSQL() + ") as _wrap").done(function(geojson) {
+            var features = geojson.features;
+            for(var i = 0; i < features.length; ++i) {
+              var f = geojson.features[i];
+              var key = f.properties.cartodb_id
+
+              // generate geometry
+              var geo = L.GeoJSON.geometryToLayer(features[i].geometry);
+              geo.setStyle(style);
+
+              // add to polygons
+              polygons[key] = polygons[key] ||  [];
+              polygons[key].push(geo);
+            }
+          });
+
+          function featureOver(e, pos, latlng, data) {
+            featureOut();
+            var pol = polygons[data.cartodb_id] || [];
+            for(var i = 0; i < pol.length; ++i) {
+              map.addLayer(pol[i]);
+              polygonsHighlighted.push(pol[i]);
+            }
+          }
+
+          function featureOut() {
+            var pol = polygonsHighlighted;
+            for(var i = 0; i < pol.length; ++i) {
+              map.removeLayer(pol[i]);
+            }
+            polygonsHighlighted = [];
+          }
+
+          layer.on('featureOver', featureOver);
+          layer.on('featureOut', featureOut);
+          layer.setInteraction(true);
+
+        }
+
       window.onload = main;
 
       document.getElementById('sidebar-close').addEventListener('click', function (event) {
@@ -187,6 +244,7 @@
         });
       });
 
+      // sidebar functions below
       var tractJSON = null;
 
       function prepareImages (data) {
