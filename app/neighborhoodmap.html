@@ -19,14 +19,32 @@
         flex-grow: 1;
       }
 
+      .hide {
+        display: none;
+      }
+
       #sidebar {
         position: relative;
         width: 0;
         transition: width 0.5s ease-in-out;
-        fill: #00000;
+        overflow-y: auto;
       }
 
-      #sidebar-chart {
+      .sidebar-header {
+        font-family: helvetica, arial, sans-serif;
+        margin: 30px 30px 20px;
+      }
+
+      .neighborhood-name,
+      .neighborhood-desc {
+        margin: 0 0 10px 0;
+      }
+
+      .images {
+        /*styles here*/
+      }
+
+      .sidebar-chart {
         margin-top: 20px;
       }
 
@@ -40,8 +58,56 @@
       #sidebar-close {
         display: none;
         position: absolute;
+        width: 20px;
+        height: 20px;
         top: 10px;
         right: 10px;
+        border-radius: 3px;
+      }
+      #sidebar-close::before,
+      #sidebar-close::after {
+        position: absolute;
+        content: '';
+        display: block;
+        width: 1px;
+        height: 20px;
+        background-color: #bbb;
+      }
+      #sidebar-close:hover {
+        background-color: #eee;
+      }
+      #sidebar-close:hover::before,
+      #sidebar-close:hover::after {
+        background-color: #999;
+      }
+      #sidebar-close::before {
+        transform: translateX(10px) rotate(45deg);
+      }
+      #sidebar-close::after {
+        transform: translateX(10px) rotate(-45deg);
+      }
+      .sidebar-options {
+        display: flex;
+      }
+      .sidebar-option {
+        background: none;
+        border: 1px solid #000;
+        font-size: 1em;
+        cursor: pointer;
+      }
+      .sidebar-option:disabled {
+        background: #000;
+        color: #fff;
+        cursor: default;
+      }
+      .sidebar-option:first-child {
+        border-top-left-radius: 3px;
+        border-bottom-left-radius: 3px;
+      }
+      .sidebar-option:last-child {
+        margin-left: -1px;
+        border-top-right-radius: 3px;
+        border-bottom-right-radius: 3px;
       }
 
     </style>
@@ -51,8 +117,21 @@
   <body>
     <div id="map"></div>
     <aside id="sidebar">
-      <a href="#" id="sidebar-close" role="button">X</a>
-      <figure id="sidebar-chart"></figure>
+      <a href="#" id="sidebar-close" role="button"></a>
+      <header class="sidebar-header">
+        <h2 class="neighborhood-name"></h2>
+        <p class="neighborhood-desc"></p>
+        <nav class="sidebar-options">
+          <button class="sidebar-option" data-toggle="false" disabled>Data</button>
+          <button class="sidebar-option" data-toggle="true">Images</button>
+        </nav>
+      </header>
+      <section class="images hide"></section>
+      <section class="charts">
+        <figure class="sidebar-chart"></figure>
+        <figure class="sidebar-chart"></figure>
+        <figure class="sidebar-chart"></figure>
+      </section>
     </aside>
 
     <!-- include cartodb.js library -->
@@ -77,9 +156,12 @@
           // setInteraction is disabled by default
           layers[1].setInteraction(true);
           layers[1].on('featureClick', function(e, latlng, pos, data) {
+            fillHeader(data);
+            prepareImages(data);
             drawLandUsePieChart(data);
             drawPhysicalFeatureBarChart(data);
             drawEconomicFeatureBarChart(data);
+            toggleSidebarContent(false);
             console.log(data);
           });
           // you can get the native map to work with it
@@ -99,6 +181,59 @@
         document.getElementById('sidebar').classList.remove('open');
       });
 
+      [].forEach.call(document.querySelectorAll('.sidebar-option'), function (el) {
+        el.addEventListener('click', function (event) {
+          toggleSidebarContent(event.target.dataset.toggle === 'true'); // dataset.toggle is a string
+        });
+      });
+
+      var tractJSON = null;
+
+      function prepareImages (data) {
+        // we don't have the json yet, grab it
+        if (!tractJSON) {
+          var req = new XMLHttpRequest();
+          req.addEventListener('load', function () {
+            tractJSON = JSON.parse(this.responseText);
+            renderImages(data.fips_tract);
+          });
+          req.open('GET', '/tract_json_picked.json');
+          req.send();
+        } else {
+          // we already have the json, go ahead and render immediately
+          renderImages(data.fips_tract);
+        }
+      }
+
+      function renderImages (fipsTract) {
+        var urls = tractJSON[fipsTract].map(function (coords) {
+          return 'http://maps.googleapis.com/maps/api/streetview?size=470x306&location=' + coords.join(',');
+        });
+        var images = urls.map(function (url) {
+          return '<img src="' + url + '"/>';
+        });
+        var imageContainer = document.querySelector('#sidebar .images');
+        imageContainer.innerHTML = images.join('');
+      }
+
+      function toggleSidebarContent (isImages) {
+        var els = [document.querySelector('#sidebar .images'),
+          document.querySelector('#sidebar .charts')];
+        if (!isImages) {
+          els.reverse();
+        }
+        els[0].classList.remove('hide');
+        els[1].classList.add('hide');
+
+        document.querySelector('.sidebar-option[data-toggle="' + isImages + '"]').setAttribute('disabled', true);
+        document.querySelector('.sidebar-option[data-toggle="' + !isImages + '"]').removeAttribute('disabled');
+      }
+
+      function fillHeader (data) {
+        document.querySelector('.neighborhood-name').textContent = data.ntaname;
+        document.querySelector('.neighborhood-desc').textContent = 'This has fips tract ' + data.fips_tract + ' and poop';
+      }
+
       function drawLandUsePieChart (data) {
         document.getElementById('sidebar').classList.add('open');
         var chartData = google.visualization.arrayToDataTable([
@@ -116,7 +251,7 @@
            chartArea: {width: '80%', height: '80%'},
            pieHole: 0.4
          };
-         var chart = new google.visualization.PieChart(document.getElementById('sidebar-chart'));
+         var chart = new google.visualization.PieChart(document.querySelectorAll('.sidebar-chart')[0]);
          chart.draw(chartData, options);
       }
 
@@ -137,7 +272,7 @@
            seriesType: 'bars',
            series: {1: {type: 'line'}}
          };
-         var chart = new google.visualization.ComboChart(document.getElementById('sidebar-chart'));
+         var chart = new google.visualization.ComboChart(document.querySelectorAll('.sidebar-chart')[1]);
          chart.draw(chartData, options);
       }
 
@@ -161,7 +296,7 @@
            series: {1: {type: 'line'}},
           //  hAxis: {slantedTextAngle: 55}
          };
-         var chart = new google.visualization.ColumnChart(document.getElementById('sidebar-chart'));
+         var chart = new google.visualization.ColumnChart(document.querySelectorAll('.sidebar-chart')[2]);
          chart.draw(chartData, options);
       }
 
