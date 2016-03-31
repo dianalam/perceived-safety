@@ -28,16 +28,26 @@
         width: 0;
         transition: width 0.5s ease-in-out;
         overflow-y: auto;
+        font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", helvetica, arial, sans-serif;
       }
 
       .sidebar-header {
-        font-family: helvetica, arial, sans-serif;
-        margin: 30px 30px 20px;
+        /*font-family: helvetica, arial, sans-serif;*/
+        margin: 20px;
       }
 
-      .neighborhood-name,
-      .neighborhood-desc {
-        margin: 0 0 10px 0;
+      .neighborhood-name {
+        margin: 0 10px 10px 0;
+      }
+
+      .neighborhood-desc,
+      .neighborhood-diffscore {
+        margin: 0 0 5px 0;
+      }
+
+      .info-header {
+        display: inline-block;
+        width: 140px;
       }
 
       .images {
@@ -87,17 +97,20 @@
         transform: translateX(10px) rotate(-45deg);
       }
       .sidebar-options {
+        margin-top: 15px;
         display: flex;
       }
       .sidebar-option {
+        flex-grow: 1;
         background: none;
-        border: 1px solid #000;
+        border: 1px solid lightgrey;
         font-size: 1em;
         cursor: pointer;
+        color: grey;
       }
       .sidebar-option:disabled {
-        background: #000;
-        color: #fff;
+        background-color: lightgrey;
+        color: black;
         cursor: default;
       }
       .sidebar-option:first-child {
@@ -109,7 +122,26 @@
         border-top-right-radius: 3px;
         border-bottom-right-radius: 3px;
       }
-
+      .ds_similar_tp {
+        background-color: rgb(246, 210, 72);
+      }
+      .ds_more_danger_tp {
+        background-color: rgb(239, 88, 83);
+        color: white;
+      }
+      .ds_safer_tp {
+        background-color: rgb(96, 180, 74);
+        color: white;
+      }
+      .diffscore {
+        display: inline-block;
+        padding: 5px;
+        border-radius: 3px;
+      }
+      .neighborhood-image {
+        display: block;
+        margin: 15px auto;
+      }
     </style>
 
     <link rel="stylesheet" href="http://libs.cartocdn.com/cartodb.js/v3/3.15/themes/css/cartodb.css" />
@@ -120,7 +152,8 @@
       <a href="#" id="sidebar-close" role="button"></a>
       <header class="sidebar-header">
         <h2 class="neighborhood-name"></h2>
-        <p class="neighborhood-desc"></p>
+        <p class="neighborhood-desc"><strong class="info-header">Tract Number:</strong> <span class="fips"></span></p>
+        <p class="neighborhood-diffscore"><strong class="info-header">Difference Score:</strong> <span class="diffscore"></span></p>
         <nav class="sidebar-options">
           <button class="sidebar-option" data-toggle="false" disabled>Data</button>
           <button class="sidebar-option" data-toggle="true">Images</button>
@@ -175,62 +208,6 @@
         });
       }
 
-      // var polygons = {};
-      //
-      // function geometryHover(username, map, layer, options) {
-      //
-      //     options = options || {}
-      //     var HIGHLIGHT_STYLE = {
-      //       weight: 3,
-      //       color: '#FFFFFF',
-      //       opacity: 1,
-      //       fillColor: '#FFFFFF',
-      //       fillOpacity: 0.3
-      //     };
-      //     style = options.style || HIGHLIGHT_STYLE;
-      //     var polygonsHighlighted = [];
-      //
-      //     // fetch the geometry
-      //     var sql = new cartodb.SQL({ user: dianalam, format: 'geojson' });
-      //     sql.execute("select cartodb_id, ST_Simplify(the_geom, 0.1) as the_geom from (" + layer.getSQL() + ") as _wrap").done(function(geojson) {
-      //       var features = geojson.features;
-      //       for(var i = 0; i < features.length; ++i) {
-      //         var f = geojson.features[i];
-      //         var key = f.properties.cartodb_id
-      //
-      //         // generate geometry
-      //         var geo = L.GeoJSON.geometryToLayer(features[i].geometry);
-      //         geo.setStyle(style);
-      //
-      //         // add to polygons
-      //         polygons[key] = polygons[key] ||  [];
-      //         polygons[key].push(geo);
-      //       }
-      //     });
-      //
-      //     function featureOver(e, pos, latlng, data) {
-      //       featureOut();
-      //       var pol = polygons[data.cartodb_id] || [];
-      //       for(var i = 0; i < pol.length; ++i) {
-      //         map.addLayer(pol[i]);
-      //         polygonsHighlighted.push(pol[i]);
-      //       }
-      //     }
-      //
-      //     function featureOut() {
-      //       var pol = polygonsHighlighted;
-      //       for(var i = 0; i < pol.length; ++i) {
-      //         map.removeLayer(pol[i]);
-      //       }
-      //       polygonsHighlighted = [];
-      //     }
-      //
-      //     layer.on('featureOver', featureOver);
-      //     layer.on('featureOut', featureOut);
-      //     layer.setInteraction(true);
-      //
-      //   }
-
       window.onload = main;
 
       document.getElementById('sidebar-close').addEventListener('click', function (event) {
@@ -268,7 +245,7 @@
           return 'http://maps.googleapis.com/maps/api/streetview?size=470x306&location=' + coords.join(',');
         });
         var images = urls.map(function (url) {
-          return '<img src="' + url + '"/>';
+          return '<img class="neighborhood-image" src="' + url + '"/>';
         });
         var imageContainer = document.querySelector('#sidebar .images');
         imageContainer.innerHTML = images.join('');
@@ -287,9 +264,23 @@
         document.querySelector('.sidebar-option[data-toggle="' + !isImages + '"]').removeAttribute('disabled');
       }
 
+
+      var ntypeDict = {
+        'similar_tp': 'similar to perceived',
+        'more_danger_tp': 'more dangerous than perceived',
+        'safer_tp': 'safer than perceived'
+      }
+
       function fillHeader (data) {
         document.querySelector('.neighborhood-name').textContent = data.ntaname + ', ' + data.boroname;
-        document.querySelector('.neighborhood-desc').textContent = 'Tract number: ' + data.fips_tract;
+        document.querySelector('.fips').textContent = data.fips_tract;
+        var diffscore = document.querySelector('.diffscore');
+        diffscore.innerHTML = '<strong>' + data.diff_zscore_r + '</strong>' +
+          ' (<em>' + ntypeDict[data.n_type] + '</em>)';
+        Object.keys(ntypeDict).forEach(function (key) {
+          diffscore.classList.remove('ds_' + key);
+        });
+        diffscore.classList.add('ds_' + data.n_type);
       }
 
       function drawLandUsePieChart (data) {
@@ -323,10 +314,10 @@
         document.getElementById('sidebar').classList.add('open');
         var chartData = google.visualization.arrayToDataTable([
            ['physical feature', '% of median', 'citywide median'],
-           ['assessed value',  data.mp_median_assesstot, 1],
-           ['year built', data.mp_yearbuilt, 1],
-           ['building heights', data.mp_median_numfloors, 1],
-           ['311 complaints', data.mp_num_311_complaints, 1]
+           ['assessed value',  data.mp_median_assesstot * 100, 100],
+           ['year built', data.mp_yearbuilt * 100, 100],
+           ['building heights', data.mp_median_numfloors * 100, 100],
+           ['311 complaints', data.mp_num_311_complaints * 100, 100]
         ]);
          var options = {
            title: 'Physical Features',
@@ -346,7 +337,7 @@
            vAxis: {textPosition: 'none', gridlines: {color:'none'}},
          };
 
-         var roundingFormatter = new google.visualization.NumberFormat({pattern: '0.00', suffix: '%'});
+         var roundingFormatter = new google.visualization.NumberFormat({pattern: '0.0', suffix: '%'});
          roundingFormatter.format(chartData, 1);
 
          var chart = new google.visualization.ComboChart(document.querySelectorAll('.sidebar-chart')[1]);
@@ -357,10 +348,10 @@
         document.getElementById('sidebar').classList.add('open');
         var chartData = google.visualization.arrayToDataTable([
            ['socioeconomic feature', '% of median', 'citywide median'],
-           ['% non-family households',  data.mp_hh_type_pct_nonfamily, 1],
-           ['% persons of color', data.mp_race_pct_nonwhite, 1],
-           ['household income', data.mp_median_hh_income, 1],
-           ['housing costs as % of income', data.mp_hh_type1_ht, 1]
+           ['% non-family households',  data.mp_hh_type_pct_nonfamily * 100, 100],
+           ['% persons of color', data.mp_race_pct_nonwhite * 100, 100],
+           ['household income', data.mp_median_hh_income * 100, 100],
+           ['housing costs as % of income', data.mp_hh_type1_ht * 100, 100]
         ]);
          var options = {
            title: 'Socioeconomic Features',
@@ -381,7 +372,7 @@
            vAxis: {textPosition: 'none', gridlines: {color:'none'}},
          };
 
-         var roundingFormatter = new google.visualization.NumberFormat({pattern: '0.00', suffix: '%'});
+         var roundingFormatter = new google.visualization.NumberFormat({pattern: '0.0', suffix: '%'});
          roundingFormatter.format(chartData, 1);
 
          var chart = new google.visualization.ColumnChart(document.querySelectorAll('.sidebar-chart')[2]);
