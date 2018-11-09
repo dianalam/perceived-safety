@@ -13,8 +13,7 @@ For the neighborhood explorer tool, see [this link][explorer tool].
 * `reverse-geocode.ipynb`: Jupyter notebook containing code to reverse geolocate crime, perceived safety, and other select socioeconomic/physical data. Converts from longitude and latitude pairs into census tracts.
 * `safety-analysis-final.ipynb`: Jupyter notebook containing code to develop a custom scoring mechanism to categorize neighborhoods as safer than perceived, neutral, or more dangerous than perceived. Also contains code to build models to predict the category of each neighborhood based on its socioeconomic and physical features.
 * `neighborhood-finder-app.ipynb`: Jupyter notebook containing code to generate data for app.
-
-Other `ipynb`s in this repo contain scratchwork documenting the evolution of the project.
+* `archive/`: Contains scratchwork documenting the evolution of the project.
 
 ## Data Sources
 * [MIT Media Lab Streetscore]: Perceived safety data.
